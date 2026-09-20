@@ -133,21 +133,48 @@
   .content-head{margin-bottom:40px;}
   .content-head p{color:var(--muted); max-width:560px;}
 
-  .oeuvre{
-    display:grid;
-    grid-template-columns:1fr auto;
+  /* --- accordéon des œuvres --- */
+  .accordion{margin-top:8px;}
+  .acc-item{border-bottom:1px solid var(--paper-dark);}
+  .acc-header{
+    width:100%;
+    display:flex;
     align-items:center;
-    gap:20px;
-    padding:24px 0;
-    border-bottom:1px solid var(--paper-dark);
+    justify-content:space-between;
+    gap:16px;
+    background:none;
+    border:none;
+    padding:24px 2px;
+    text-align:left;
+    cursor:pointer;
+    font-family:inherit;
+    color:inherit;
   }
-  .oeuvre h3{font-size:1.2rem;}
-  .oeuvre .composer{color:var(--muted); font-size:0.95rem; margin-top:4px;}
-  .oeuvre .links{
+  .acc-header h3{font-size:1.15rem;}
+  .acc-header .composer{
+    color:var(--muted);
+    font-size:0.92rem;
+    margin-top:4px;
+    font-weight:400;
+    font-family:'Source Serif 4', serif;
+  }
+  .acc-header .chevron{
+    font-family:'JetBrains Mono', monospace;
+    color:var(--gold);
+    font-size:1.1rem;
+    flex-shrink:0;
+    transition:transform .25s ease;
+  }
+  .acc-item.open .chevron{transform:rotate(180deg);}
+  .acc-panel{display:none;}
+  .acc-item.open .acc-panel{display:block;}
+  .acc-panel-inner{padding:0 2px 34px;}
+
+  .score-row{
     display:flex;
     gap:10px;
     flex-wrap:wrap;
-    align-items:center;
+    margin-bottom:24px;
   }
   .link-btn{
     display:inline-flex;
@@ -160,12 +187,79 @@
     border-radius:2px;
     font-family:'JetBrains Mono', monospace;
     font-size:0.82rem;
+    background:none;
+    cursor:pointer;
   }
   .link-btn:hover{background:var(--ink); color:var(--paper);}
-  audio{height:34px;}
+
+  /* --- lecteur multipiste --- */
+  .player{
+    background:#fff;
+    border:1px solid var(--paper-dark);
+    border-radius:4px;
+    padding:22px 22px 18px;
+  }
+  .player-transport{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+  }
+  .transport-btn{
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    border:1px solid var(--ink);
+    background:var(--paper);
+    color:var(--ink);
+    cursor:pointer;
+    font-size:0.95rem;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    transition:background .15s, color .15s;
+  }
+  .transport-btn:hover{background:var(--ink); color:var(--paper);}
+  input[type="range"].seek{
+    flex:1;
+    min-width:140px;
+    accent-color:var(--wine);
+  }
+  .player .time{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.78rem;
+    color:var(--muted);
+    min-width:96px;
+    text-align:right;
+    flex-shrink:0;
+  }
+  .tracks{border-top:1px solid var(--paper-dark); padding-top:6px;}
+  .track{
+    display:grid;
+    grid-template-columns:100px 1fr auto;
+    align-items:center;
+    gap:16px;
+    padding:12px 0;
+  }
+  .track + .track{border-top:1px dashed var(--paper-dark);}
+  .track .label{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.82rem;
+    color:var(--ink);
+  }
+  input[type="range"].vol{width:100%; accent-color:var(--gold);}
+  .track .dl{padding:6px 10px; font-size:0.75rem;}
+  .loading-note{
+    font-family:'JetBrains Mono', monospace;
+    font-size:0.78rem;
+    color:var(--muted);
+  }
 
   @media (max-width:640px){
-    .oeuvre{grid-template-columns:1fr;}
+    .track{grid-template-columns:1fr;}
+    .track .dl{justify-self:start;}
   }
 
   footer{
@@ -206,10 +300,10 @@
 <main id="content">
   <div class="content-head">
     <h1>Partitions &amp; audios</h1>
-    <p>Retrouvez ici les fichiers de travail. Cliquez sur « Partition » pour télécharger le PDF, ou lancez l'écoute directement.</p>
+    <p>Cliquez sur une chanson pour ouvrir sa partition et son lecteur multipiste. Vous pouvez lancer plusieurs voix en même temps et régler le volume de chacune indépendamment pour travailler la vôtre.</p>
   </div>
 
-  <div id="liste"></div>
+  <div id="liste" class="accordion"></div>
 </main>
 
 <footer>
@@ -218,39 +312,195 @@
 
 <script>
   // ================================================================
-  //  CONTENU À MODIFIER : ajoutez une ligne par œuvre.
-  //  - pdf   : chemin vers le fichier de partition (dans fichiers/partitions/)
-  //  - audio : chemin vers l'enregistrement (dans fichiers/audios/), ou "" si aucun
+  //  CONTENU À MODIFIER : ajoutez un bloc par chanson.
+  //  - pdf    : chemin vers la partition (dans fichiers/partitions/), ou "" si aucune
+  //  - audios : une entrée par voix/piste (3 à 5 en général), avec :
+  //      - label : nom affiché (ex: "Soprano", "Alto", "Ténor", "Basse", "Piano")
+  //      - src   : chemin vers le fichier (dans fichiers/audios/)
+  //  Toutes les pistes audios d'une même chanson doivent avoir la même durée
+  //  pour rester synchronisées (exportez-les depuis le même enregistrement).
   // ================================================================
   const oeuvres = [
     {
       titre: "Titre de l'œuvre 1",
       compositeur: "Compositeur·rice",
       pdf: "fichiers/partitions/oeuvre1.pdf",
-      audio: "fichiers/audios/oeuvre1.mp3"
+      audios: [
+        { label: "Soprano", src: "fichiers/audios/oeuvre1-soprano.mp3" },
+        { label: "Alto",    src: "fichiers/audios/oeuvre1-alto.mp3" },
+        { label: "Ténor",   src: "fichiers/audios/oeuvre1-tenor.mp3" },
+        { label: "Basse",   src: "fichiers/audios/oeuvre1-basse.mp3" }
+      ]
     },
     {
       titre: "Titre de l'œuvre 2",
       compositeur: "Compositeur·rice",
       pdf: "fichiers/partitions/oeuvre2.pdf",
-      audio: "fichiers/audios/oeuvre2.mp3"
-    },
+      audios: [
+        { label: "Soprano", src: "fichiers/audios/oeuvre2-soprano.mp3" },
+        { label: "Alto",    src: "fichiers/audios/oeuvre2-alto.mp3" },
+        { label: "Ténor",   src: "fichiers/audios/oeuvre2-tenor.mp3" },
+        { label: "Basse",   src: "fichiers/audios/oeuvre2-basse.mp3" }
+      ]
+    }
   ];
 
-  function afficherOeuvres() {
+  function formatTemps(s) {
+    if (!isFinite(s) || s < 0) return '0:00';
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  // Construit le lecteur multipiste d'une chanson à l'intérieur de son panneau.
+  // Les fichiers audio ne sont chargés qu'au premier dépliage (preload uniquement
+  // au clic), pour ne pas télécharger tous les enregistrements d'un coup.
+  function initLecteur(container, oeuvre) {
+    if (!oeuvre.audios || oeuvre.audios.length === 0) {
+      container.innerHTML = '<p class="loading-note">Aucun enregistrement pour le moment.</p>';
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="player-transport">
+        <button type="button" class="transport-btn play-pause" aria-label="Lecture">▶</button>
+        <button type="button" class="transport-btn stop" aria-label="Stop">⏹</button>
+        <input type="range" class="seek" min="0" max="0" value="0" step="0.1">
+        <span class="time">0:00 / 0:00</span>
+      </div>
+      <div class="tracks"></div>
+    `;
+
+    const audios = oeuvre.audios.map(a => {
+      const el = new Audio(a.src);
+      el.preload = 'metadata';
+      return el;
+    });
+
+    const tracksDiv = container.querySelector('.tracks');
+    oeuvre.audios.forEach((a, i) => {
+      const row = document.createElement('div');
+      row.className = 'track';
+      row.innerHTML = `
+        <div class="label">${a.label}</div>
+        <input type="range" class="vol" min="0" max="1" step="0.01" value="1">
+        <a class="link-btn dl" href="${a.src}" download>⬇</a>
+      `;
+      tracksDiv.appendChild(row);
+      const vol = row.querySelector('.vol');
+      audios[i].volume = Number(vol.value);
+      vol.addEventListener('input', () => { audios[i].volume = Number(vol.value); });
+    });
+
+    const ref = audios[0]; // piste de référence pour la durée et le curseur
+    const playBtn = container.querySelector('.play-pause');
+    const stopBtn = container.querySelector('.stop');
+    const seek = container.querySelector('.seek');
+    const timeLabel = container.querySelector('.time');
+    let enLecture = false;
+    let enDeplacement = false;
+
+    ref.addEventListener('loadedmetadata', () => {
+      seek.max = ref.duration || 0;
+      timeLabel.textContent = `0:00 / ${formatTemps(ref.duration)}`;
+    });
+
+    playBtn.addEventListener('click', () => {
+      if (enLecture) {
+        audios.forEach(a => a.pause());
+        playBtn.textContent = '▶';
+        playBtn.setAttribute('aria-label', 'Lecture');
+        enLecture = false;
+      } else {
+        audios.forEach(a => { a.currentTime = ref.currentTime; a.play(); });
+        playBtn.textContent = '⏸';
+        playBtn.setAttribute('aria-label', 'Pause');
+        enLecture = true;
+      }
+    });
+
+    stopBtn.addEventListener('click', () => {
+      audios.forEach(a => { a.pause(); a.currentTime = 0; });
+      playBtn.textContent = '▶';
+      playBtn.setAttribute('aria-label', 'Lecture');
+      enLecture = false;
+      seek.value = 0;
+      timeLabel.textContent = `0:00 / ${formatTemps(ref.duration || 0)}`;
+    });
+
+    seek.addEventListener('input', () => {
+      enDeplacement = true;
+      timeLabel.textContent = `${formatTemps(Number(seek.value))} / ${formatTemps(ref.duration || 0)}`;
+    });
+    seek.addEventListener('change', () => {
+      audios.forEach(a => { a.currentTime = Number(seek.value); });
+      enDeplacement = false;
+    });
+
+    ref.addEventListener('ended', () => {
+      audios.forEach(a => { a.pause(); a.currentTime = 0; });
+      playBtn.textContent = '▶';
+      playBtn.setAttribute('aria-label', 'Lecture');
+      enLecture = false;
+      seek.value = 0;
+    });
+
+    // Boucle de suivi : avance le curseur et recale les pistes qui auraient
+    // dérivé de plus de 0.2s par rapport à la piste de référence.
+    setInterval(() => {
+      if (!enLecture || enDeplacement) return;
+      seek.value = ref.currentTime;
+      timeLabel.textContent = `${formatTemps(ref.currentTime)} / ${formatTemps(ref.duration || 0)}`;
+      audios.forEach(a => {
+        if (Math.abs(a.currentTime - ref.currentTime) > 0.2) {
+          a.currentTime = ref.currentTime;
+        }
+      });
+    }, 250);
+  }
+
+  function creerAccordion() {
     const liste = document.getElementById('liste');
-    liste.innerHTML = oeuvres.map(o => `
-      <div class="oeuvre">
-        <div>
-          <h3>${o.titre}</h3>
-          <div class="composer">${o.compositeur}</div>
-        </div>
-        <div class="links">
-          ${o.pdf ? `<a class="link-btn" href="${o.pdf}" target="_blank" rel="noopener">📄 Partition</a>` : ''}
-          ${o.audio ? `<audio controls preload="none" src="${o.audio}"></audio>` : ''}
+    liste.innerHTML = oeuvres.map((o, idx) => `
+      <div class="acc-item">
+        <button type="button" class="acc-header" data-idx="${idx}">
+          <div>
+            <h3>${o.titre}</h3>
+            <div class="composer">${o.compositeur}</div>
+          </div>
+          <span class="chevron" aria-hidden="true">▾</span>
+        </button>
+        <div class="acc-panel">
+          <div class="acc-panel-inner">
+            ${o.pdf ? `<div class="score-row">
+              <a class="link-btn" href="${o.pdf}" target="_blank" rel="noopener">📄 Voir la partition</a>
+              <a class="link-btn" href="${o.pdf}" download>⬇ Télécharger la partition</a>
+            </div>` : ''}
+            <div class="player" data-idx="${idx}"></div>
+          </div>
         </div>
       </div>
     `).join('');
+
+    liste.querySelectorAll('.acc-header').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.closest('.acc-item');
+        const idx = Number(btn.dataset.idx);
+        const isOpen = item.classList.contains('open');
+
+        if (isOpen) {
+          item.classList.remove('open');
+          return;
+        }
+
+        item.classList.add('open');
+        const playerDiv = item.querySelector('.player');
+        if (!playerDiv.dataset.init) {
+          initLecteur(playerDiv, oeuvres[idx]);
+          playerDiv.dataset.init = '1';
+        }
+      });
+    });
   }
 
   // ================================================================
@@ -281,7 +531,7 @@
       setTimeout(() => {
         document.getElementById('gate').style.display = 'none';
         document.getElementById('content').style.display = 'block';
-        afficherOeuvres();
+        creerAccordion();
       }, 250);
     } else {
       err.textContent = "Mot de passe incorrect.";
@@ -293,7 +543,7 @@
   if (sessionStorage.getItem('membre_ok') === '1') {
     document.getElementById('gate').style.display = 'none';
     document.getElementById('content').style.display = 'block';
-    afficherOeuvres();
+    creerAccordion();
   }
 </script>
 
