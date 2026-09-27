@@ -501,28 +501,29 @@
     }, 250); // frequence de refresh de la barre de progression
   }*/
 
-    const SEUIL_DOUX = 0.05;
-    const SEUIL_DUR = 1;
-    const VITESSE_RATTRAPAGE = 0.04;
+    const SEUIL_DUR = 1;          // décalage énorme (ex: après un seek) : on saute directement
+    const GAIN_RATTRAPAGE = 0.15; // force de la correction, proportionnelle au décalage
+    const VITESSE_MAX = 0.06;     // vitesse de correction max (6%), au-delà ça s'entend trop
     
     setInterval(() => {
       if (!enLecture || enDeplacement) return;
       const ref = pisteReference();
       seek.value = ref.currentTime;
       timeLabel.textContent = `${formatTemps(ref.currentTime)} / ${formatTemps(ref.duration || 0)}`;
-
+    
       audios.forEach((a, i) => {
         if (enErreur[i] || a === ref) return;
-        const decalage = a.currentTime - ref.currentTime;
-
+        const decalage = a.currentTime - ref.currentTime; // >0 = en avance, <0 = en retard
+    
         if (Math.abs(decalage) > SEUIL_DUR) {
           a.currentTime = ref.currentTime;
           a.playbackRate = 1;
-        } else if (Math.abs(decalage) > SEUIL_DOUX) {
-          a.playbackRate = decalage > 0 ? (1 - VITESSE_RATTRAPAGE) : (1 + VITESSE_RATTRAPAGE);
-        } else {
-          a.playbackRate = 1;
+          return;
         }
+    
+        let correction = -decalage * GAIN_RATTRAPAGE;
+        correction = Math.max(-VITESSE_MAX, Math.min(VITESSE_MAX, correction));
+        a.playbackRate = 1 + correction;
       });
     }, 250);
   }
