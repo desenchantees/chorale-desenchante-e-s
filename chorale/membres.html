@@ -491,7 +491,7 @@
       if (maintenant - dernierRecalage < 2000) return; // pas plus d'un recalage par 2 secondes
       audios.forEach((a, i) => {
         if (enErreur[i]) return;
-        if (Math.abs(a.currentTime - ref.currentTime) > 0.4) { // 0.4 c'est le seuil de tolérance en sec avant de recaler une piste
+        if (Math.abs(a.currentTime - ref.currentTime) > 99) { // 0.4 c'est le seuil de tolérance en sec avant de recaler une piste
           a.currentTime = ref.currentTime;
         }
       });
