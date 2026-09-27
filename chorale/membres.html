@@ -483,23 +483,23 @@
 
     // Boucle de suivi : avance le curseur et recale les pistes qui auraient
     // dérivé de plus de 0.2s par rapport à la piste de référence.
-//    let dernierRecalage = 0;
-//    setInterval(() => {
-//      if (!enLecture || enDeplacement) return;
-//      const ref = pisteReference();
-//      seek.value = ref.currentTime;
-//      timeLabel.textContent = `${formatTemps(ref.currentTime)} / ${formatTemps(ref.duration || 0)}`;
-//      
-//      const maintenant = performance.now();
-//      if (maintenant - dernierRecalage < 2000) return; // pas plus d'un recalage par 2 secondes
-//      audios.forEach((a, i) => {
-//        if (enErreur[i]) return;
-//        if (Math.abs(a.currentTime - ref.currentTime) > 99) { // 0.4 c'est le seuil de tolérance en sec avant de recaler une piste
-//          a.currentTime = ref.currentTime;
-//        }
-//      });
-//    }, 250); // frequence de refresh de la barre de progression
-//  }
+/*    let dernierRecalage = 0;
+    setInterval(() => {
+      if (!enLecture || enDeplacement) return;
+      const ref = pisteReference();
+      seek.value = ref.currentTime;
+      timeLabel.textContent = `${formatTemps(ref.currentTime)} / ${formatTemps(ref.duration || 0)}`;
+      
+      const maintenant = performance.now();
+      if (maintenant - dernierRecalage < 2000) return; // pas plus d'un recalage par 2 secondes
+      audios.forEach((a, i) => {
+        if (enErreur[i]) return;
+        if (Math.abs(a.currentTime - ref.currentTime) > 99) { // 0.4 c'est le seuil de tolérance en sec avant de recaler une piste
+          a.currentTime = ref.currentTime;
+        }
+      });
+    }, 250); // frequence de refresh de la barre de progression
+  }*/
 
     const SEUIL_DOUX = 0.05;
     const SEUIL_DUR = 1;
@@ -510,11 +510,11 @@
       const ref = pisteReference();
       seek.value = ref.currentTime;
       timeLabel.textContent = `${formatTemps(ref.currentTime)} / ${formatTemps(ref.duration || 0)}`;
-    
+
       audios.forEach((a, i) => {
         if (enErreur[i] || a === ref) return;
         const decalage = a.currentTime - ref.currentTime;
-    
+
         if (Math.abs(decalage) > SEUIL_DUR) {
           a.currentTime = ref.currentTime;
           a.playbackRate = 1;
@@ -525,6 +525,7 @@
         }
       });
     }, 250);
+  }
 
   function creerAccordion() {
     const liste = document.getElementById('liste');
