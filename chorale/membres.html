@@ -480,11 +480,15 @@
 
     // Boucle de suivi : avance le curseur et recale les pistes qui auraient
     // dérivé de plus de 0.2s par rapport à la piste de référence.
+    let dernierRecalage = 0;
     setInterval(() => {
       if (!enLecture || enDeplacement) return;
       const ref = pisteReference();
       seek.value = ref.currentTime;
       timeLabel.textContent = `${formatTemps(ref.currentTime)} / ${formatTemps(ref.duration || 0)}`;
+      
+      const maintenant = performance.now();
+      if (maintenant - dernierRecalage < 1000) return; // pas plus d'un recalage par seconde
       audios.forEach((a, i) => {
         if (enErreur[i]) return;
         if (Math.abs(a.currentTime - ref.currentTime) > 0.2) {
