@@ -336,7 +336,7 @@
     }, 
         {
       titre: "Everything Matters",
-      compositeur: "Aurora & Pomme (les audios arrivent bientôt !",
+      compositeur: "Aurora & Pomme (les audios arrivent bientôt !)",
       pdf: "fichiers/paroles/Everything_matters_paroles.pdf",
       audios: [
         { label: "Graves", src: "fichiers/audios/" },
@@ -379,23 +379,42 @@
       el.preload = 'metadata';
       return el;
     });
+    const enErreur = new Array(audios.length).fill(false);
 
     const tracksDiv = container.querySelector('.tracks');
     oeuvre.audios.forEach((a, i) => {
       const row = document.createElement('div');
       row.className = 'track';
       row.innerHTML = `
-        <div class="label">${a.label}</div>
+        <div class="label">${a.label}<br><span class="track-status mono"></span></div>
         <input type="range" class="vol" min="0" max="1" step="0.01" value="1">
         <a class="link-btn dl" href="${a.src}" download>⬇</a>
       `;
       tracksDiv.appendChild(row);
       const vol = row.querySelector('.vol');
+      const statut = row.querySelector('.track-status');
       audios[i].volume = Number(vol.value);
       vol.addEventListener('input', () => { audios[i].volume = Number(vol.value); });
+
+      // Si le fichier ne charge pas (mauvais chemin, fichier absent...), on le
+      // signale clairement au lieu de laisser la piste silencieuse sans explication.
+      audios[i].addEventListener('error', () => {
+        enErreur[i] = true;
+        statut.textContent = '⚠ fichier introuvable';
+        statut.style.color = 'var(--wine)';
+        vol.disabled = true;
+        row.querySelector('.dl').style.opacity = '0.4';
+        row.querySelector('.dl').style.pointerEvents = 'none';
+      });
     });
 
-    const ref = audios[0]; // piste de référence pour la durée et le curseur
+    // Piste de référence pour la durée et le curseur : la première piste qui
+    // charge correctement (pas forcément la première du tableau si elle est en erreur).
+    function pisteReference() {
+      const idx = audios.findIndex((a, i) => !enErreur[i]);
+      return idx === -1 ? audios[0] : audios[idx];
+    }
+
     const playBtn = container.querySelector('.play-pause');
     const stopBtn = container.querySelector('.stop');
     const seek = container.querySelector('.seek');
@@ -403,10 +422,14 @@
     let enLecture = false;
     let enDeplacement = false;
 
-    ref.addEventListener('loadedmetadata', () => {
-      seek.max = ref.duration || 0;
-      timeLabel.textContent = `0:00 / ${formatTemps(ref.duration)}`;
-    });
+    function metAJourDuree() {
+      const ref = pisteReference();
+      if (ref.duration) seek.max = ref.duration;
+      if (!enDeplacement) {
+        timeLabel.textContent = `${formatTemps(ref.currentTime)} / ${formatTemps(ref.duration || 0)}`;
+      }
+    }
+    audios.forEach(a => a.addEventListener('loadedmetadata', metAJourDuree));
 
     playBtn.addEventListener('click', () => {
       if (enLecture) {
@@ -415,7 +438,12 @@
         playBtn.setAttribute('aria-label', 'Lecture');
         enLecture = false;
       } else {
-        audios.forEach(a => { a.currentTime = ref.currentTime; a.play(); });
+        const ref = pisteReference();
+        audios.forEach((a, i) => {
+          if (enErreur[i]) return;
+          a.currentTime = ref.currentTime;
+          a.play().catch(() => {});
+        });
         playBtn.textContent = '⏸';
         playBtn.setAttribute('aria-label', 'Pause');
         enLecture = true;
@@ -423,38 +451,42 @@
     });
 
     stopBtn.addEventListener('click', () => {
-      audios.forEach(a => { a.pause(); a.currentTime = 0; });
+      audios.forEach((a, i) => { if (!enErreur[i]) { a.pause(); a.currentTime = 0; } });
       playBtn.textContent = '▶';
       playBtn.setAttribute('aria-label', 'Lecture');
       enLecture = false;
       seek.value = 0;
-      timeLabel.textContent = `0:00 / ${formatTemps(ref.duration || 0)}`;
+      metAJourDuree();
     });
 
     seek.addEventListener('input', () => {
       enDeplacement = true;
+      const ref = pisteReference();
       timeLabel.textContent = `${formatTemps(Number(seek.value))} / ${formatTemps(ref.duration || 0)}`;
     });
     seek.addEventListener('change', () => {
-      audios.forEach(a => { a.currentTime = Number(seek.value); });
+      audios.forEach((a, i) => { if (!enErreur[i]) a.currentTime = Number(seek.value); });
       enDeplacement = false;
     });
 
-    ref.addEventListener('ended', () => {
-      audios.forEach(a => { a.pause(); a.currentTime = 0; });
+    audios.forEach(a => a.addEventListener('ended', () => {
+      if (a !== pisteReference()) return; // seule la fin de la piste de référence arrête tout le monde
+      audios.forEach((x, i) => { if (!enErreur[i]) { x.pause(); x.currentTime = 0; } });
       playBtn.textContent = '▶';
       playBtn.setAttribute('aria-label', 'Lecture');
       enLecture = false;
       seek.value = 0;
-    });
+    }));
 
     // Boucle de suivi : avance le curseur et recale les pistes qui auraient
     // dérivé de plus de 0.2s par rapport à la piste de référence.
     setInterval(() => {
       if (!enLecture || enDeplacement) return;
+      const ref = pisteReference();
       seek.value = ref.currentTime;
       timeLabel.textContent = `${formatTemps(ref.currentTime)} / ${formatTemps(ref.duration || 0)}`;
-      audios.forEach(a => {
+      audios.forEach((a, i) => {
+        if (enErreur[i]) return;
         if (Math.abs(a.currentTime - ref.currentTime) > 0.2) {
           a.currentTime = ref.currentTime;
         }
