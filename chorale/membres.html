@@ -287,7 +287,7 @@
 <div class="gate-wrap" id="gate">
   <div class="seal" id="seal" aria-hidden="true">♪</div>
   <h1>Espace membres</h1>
-  <p class="sub">Entrez le mot de passe partagé pour accéder aux partitions et aux enregistrements.</p>
+  <p class="sub">Entrez le mot de passe partagé pour accéder aux paroles et aux enregistrements.</p>
   <form class="gate" id="gateForm" autocomplete="off">
     <input type="password" id="pwd" placeholder="Mot de passe" required>
     <button type="submit" class="btn">Entrer</button>
@@ -299,8 +299,8 @@
 <!-- ===== CONTENU RÉSERVÉ ===== -->
 <main id="content">
   <div class="content-head">
-    <h1>Partitions &amp; audios</h1>
-    <p>Cliquez sur une chanson pour ouvrir sa partition et son lecteur multipiste. Vous pouvez lancer plusieurs voix en même temps et régler le volume de chacune indépendamment pour travailler la vôtre.</p>
+    <h1>Paroles &amp; audios</h1>
+    <p>Cliquez sur une chanson pour ouvrir ses paroles et son lecteur multipiste. Vous pouvez lancer plusieurs voix en même temps et régler le volume de chacune indépendamment pour travailler la vôtre.</p>
   </div>
 
   <div id="liste" class="accordion"></div>
@@ -313,7 +313,7 @@
 <script>
   // ================================================================
   //  CONTENU À MODIFIER : ajoutez un bloc par chanson.
-  //  - pdf    : chemin vers la partition (dans fichiers/partitions/), ou "" si aucune
+  //  - pdf    : chemin vers les paroles (dans fichiers/paroles/), ou "" si aucune
   //  - audios : une entrée par voix/piste (3 à 5 en général), avec :
   //      - label : nom affiché (ex: "Soprano", "Alto", "Ténor", "Basse", "Piano")
   //      - src   : chemin vers le fichier (dans fichiers/audios/)
@@ -512,8 +512,8 @@
         <div class="acc-panel">
           <div class="acc-panel-inner">
             ${o.pdf ? `<div class="score-row">
-              <a class="link-btn" href="${o.pdf}" target="_blank" rel="noopener">📄 Voir la partition</a>
-              <a class="link-btn" href="${o.pdf}" download>⬇ Télécharger la partition</a>
+              <a class="link-btn" href="${o.pdf}" target="_blank" rel="noopener">📄 Voir les paroles</a>
+              <a class="link-btn" href="${o.pdf}" download>⬇ Télécharger les paroles</a>
             </div>` : ''}
             <div class="player" data-idx="${idx}"></div>
           </div>
