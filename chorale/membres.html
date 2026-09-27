@@ -488,14 +488,14 @@
       timeLabel.textContent = `${formatTemps(ref.currentTime)} / ${formatTemps(ref.duration || 0)}`;
       
       const maintenant = performance.now();
-      if (maintenant - dernierRecalage < 1000) return; // pas plus d'un recalage par seconde
+      if (maintenant - dernierRecalage < 2000) return; // pas plus d'un recalage par 2 secondes
       audios.forEach((a, i) => {
         if (enErreur[i]) return;
-        if (Math.abs(a.currentTime - ref.currentTime) > 0.2) {
+        if (Math.abs(a.currentTime - ref.currentTime) > 0.4) { // 0.4 c'est le seuil de tolérance en sec avant de recaler une piste
           a.currentTime = ref.currentTime;
         }
       });
-    }, 250);
+    }, 250); // frequence de refresh de la barre de progression
   }
 
   function creerAccordion() {
